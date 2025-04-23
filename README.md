@@ -25,9 +25,7 @@ Then run the python backend:
 ```bash
 python main.py
 ```
-To Exit from the backend click ```bash
-ctrl + c
-```
-and then ```bash
+To Exit from the backend click ctrl + c and then 
+```bash
 deactivate
 ```
