@@ -23,7 +23,7 @@ Run the backend in another terminal, inside the directory of the backend folder 
 ```
 Then run the python backend:
 ```bash
-python main.py
+python app.py
 ```
 To Exit from the backend click ctrl + c and then 
 ```bash
