@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import axios from "axios";
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend
-} from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend, PieChart, Pie} from "recharts";
 import { styled } from '@mui/material/styles';
 import Button from '@mui/material/Button';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -34,7 +32,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
+  const [warnings, setWarnings] = useState<string[]>([]);
   const [showCycle, setShowCycle] = useState(true);
   const [showWaiting, setShowWaiting] = useState(true);
   const [showProcessing, setShowProcessing] = useState(true);
@@ -45,7 +43,7 @@ export default function Home() {
     setLoading(true);
     setFeedback(null);
     setError(null);
-
+  
     const formData = new FormData();
     formData.append("file", selectedFile);
 
@@ -55,6 +53,7 @@ export default function Home() {
       });
       setData(response.data);
       setFeedback("Analysis completed successfully!");
+      setWarnings(response.data.warnings || []);
     } catch (err) {
       console.error("Error:", err);
       setError("An error occurred while analyzing the file.");
@@ -126,6 +125,11 @@ export default function Home() {
               {error}
             </Alert>
           )}
+          {warnings.length > 0 && warnings.map((w, i) => (
+            <Alert key={i} severity="warning" icon={<ErrorIcon fontSize="inherit" />}>
+              {w}
+            </Alert>
+        ))}
         </div>
 
         {data && (
@@ -160,7 +164,8 @@ export default function Home() {
                 </BarChart>
               </ResponsiveContainer>
               <p className="text-sm text-gray-600 mt-4">
-                Chart showing min, avg, and max durations per activity for each trace.
+                Chart showing min, avg, and max durations per activity for each trace. 
+                  <br></br>Note that will be shown only those activities for which are present both ASSIGN and COMPLETE information.
               </p>
             </div>
 
@@ -203,6 +208,7 @@ export default function Home() {
                 </ResponsiveContainer>
                 <p className="text-sm text-gray-600 mt-4">
                   Chart showing average cycle, waiting, and processing times per activity for each trace.
+                  <br></br>Note that will be shown only those activities for which are present both ASSIGN and COMPLETE information.
                 </p>
               </div>
             )}
@@ -258,11 +264,85 @@ export default function Home() {
                   </div>
                   <p className="text-sm text-gray-600 mt-4">
                     Heatmap with activities (on X-axis) and trace IDs (on Y-axis). <br></br> Colors range from green (short wait) to red (long wait), normalized to the maximum value.
+                    <br></br>Note that will be shown only those activities for which are present both ASSIGN and COMPLETE information.
                   </p>
                 </div>
-
+              
             )}
+            {data.costs && (
+              <div className="bg-white p-6 rounded-xl shadow">
+                <h2 className="text-xl font-semibold mb-4 text-gray-800">
+                  Cost Analysis per Activity (Fixed vs Variable)
+                </h2>
+                <ResponsiveContainer width="100%" height={400}>
+                  <BarChart
+                    data={data.costs}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+                    stackOffset="sign"
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="activity"
+                      angle={-45}
+                      textAnchor="end"
+                      interval={0}
+                      height={80}
+                      label={{ value: "Activity", position: "insideBottom", offset: -60 }}
+                    />
+                    <YAxis
+                      label={{ value: "Average Cost (€) ", angle: -90, position: "insideLeft" }}
+                    />
+                    <Tooltip
+                      formatter={(value: any, name: string) => [`€${value.toFixed(2)}`, name.replace("_", " ")]}
+                    />
+                    <Legend />
+                    <Bar dataKey="avg_fixed_cost" stackId="a" fill="#60a5fa" name="Fixed Cost" />
+                    <Bar dataKey="avg_variable_cost" stackId="a" fill="#facc15" name="Variable Cost" />
+                  </BarChart>
+                </ResponsiveContainer>
+                <p className="text-sm text-gray-600 mt-4">
+                  Each bar represents the average fixed and variable costs of an activity for each trace the activity is present.
+                </p>
+              </div>
+            )}
+            
+            {data.itemCosts && data.itemCosts.length > 0 && (
+              <div className="bg-white p-6 rounded-xl shadow">
+                <h2 className="text-xl font-semibold mb-4 text-gray-800">
+                  Average Cost per Item Type
+                </h2>
+                <div className="flex justify-center">
+                <div style={{ width: "100%", maxWidth: 500, height: 400 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={data.itemCosts}
+                          dataKey="avg_item_cost"
+                          nameKey="instanceType"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={120}
+                          fill="#8884d8"
+                          label={({ percent, payload }) =>
+                            `${(percent * 100).toFixed(1)}% (€${payload.value.toFixed(0)})`
+                          }                          
+                        />
+                        <Tooltip
+                          formatter={(value: any) => [`€${value.toFixed(2)}`, "Avg Cost"]}
+                          labelFormatter={(label) => `Item: ${label}`}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 mt-4 text-center">
+                  Distribution of average production costs per item type.
+                </p>
+              </div>
+            )}
+
           </div>
+          
         )}
       </div>
     </div>
